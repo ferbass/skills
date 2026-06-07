@@ -5,6 +5,15 @@ machine. Each skill is a folder with a `SKILL.md`. They're symlinked into every
 agent's config so there's a single source of truth — edit the file here and all
 agents see the change.
 
+## Skills
+
+| Skill | What it does |
+|-------|--------------|
+| [`jira`](jira/SKILL.md) | Work with Jira issues from the conversation — describe, create, update, comment, and transition (e.g. move to In Progress / Done). Uses a local Jira MCP, falling back to the REST API with configured credentials. |
+| [`terraform`](terraform/SKILL.md) | Gated Terraform workflow — plan first, explain changes, flag destructive actions, and confirm before every apply. |
+| [`write-log`](write-log/SKILL.md) | Draft a Jekyll engineering-log post from the current conversation (documentation + runbook). Writes to `ENG_LOG_DIR`. |
+| [`write-post`](write-post/SKILL.md) | Draft a post for your personal Jekyll blog in your voice, following the blog's conventions. Writes to `BLOG_DIR`. |
+
 ## Layout
 
 ```
