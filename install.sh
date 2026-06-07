@@ -14,8 +14,36 @@ set -euo pipefail
 
 SKILLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Sanity check: the skills source folder must exist and hold at least one skill.
+if [ ! -d "$SKILLS_DIR" ]; then
+  echo "error: skills dir not found: $SKILLS_DIR" >&2
+  exit 1
+fi
+
 # Claude config homes (each gets a skills/<name> symlink to the skill folder).
-CLAUDE_HOMES=("$HOME/.claude" "$HOME/.claude-personal")
+# Keep only the homes that actually exist on this machine; note the ones skipped.
+CLAUDE_HOMES=()
+for home in "$HOME/.claude" "$HOME/.claude-personal"; do
+  if [ -d "$home" ]; then
+    CLAUDE_HOMES+=("$home")
+  else
+    echo "claude home not found; skipping: $home"
+  fi
+done
+
+# Only wire up Gemini if its CLI is actually installed.
+if command -v gemini >/dev/null 2>&1; then
+  HAVE_GEMINI=1
+else
+  HAVE_GEMINI=0
+  echo "gemini CLI not found; skipping Gemini command links."
+fi
+
+# Nothing to link into? Stop before walking the skills.
+if [ "${#CLAUDE_HOMES[@]}" -eq 0 ] && [ "$HAVE_GEMINI" -eq 0 ]; then
+  echo "error: no Claude homes and no Gemini CLI found; nothing to do." >&2
+  exit 1
+fi
 
 linked=0
 for skill in "$SKILLS_DIR"/*/; do
@@ -23,17 +51,18 @@ for skill in "$SKILLS_DIR"/*/; do
   name="$(basename "$skill")"
   skill="${skill%/}"
 
-  # Claude agents: symlink the whole skill folder.
-  for home in "${CLAUDE_HOMES[@]}"; do
-    [ -d "$home" ] || continue
-    mkdir -p "$home/skills"
-    ln -sfn "$skill" "$home/skills/$name"
-    echo "claude  $home/skills/$name -> $skill"
-    linked=$((linked + 1))
-  done
+  # Claude agents: symlink the whole skill folder (homes already verified above).
+  if [ "${#CLAUDE_HOMES[@]}" -gt 0 ]; then
+    for home in "${CLAUDE_HOMES[@]}"; do
+      mkdir -p "$home/skills"
+      ln -sfn "$skill" "$home/skills/$name"
+      echo "claude  $home/skills/$name -> $skill"
+      linked=$((linked + 1))
+    done
+  fi
 
   # Gemini CLI: symlink the TOML command wrapper, if present.
-  if [ -f "$skill/gemini-command.toml" ]; then
+  if [ "$HAVE_GEMINI" -eq 1 ] && [ -f "$skill/gemini-command.toml" ]; then
     mkdir -p "$HOME/.gemini/commands"
     ln -sfn "$skill/gemini-command.toml" "$HOME/.gemini/commands/$name.toml"
     echo "gemini  $HOME/.gemini/commands/$name.toml -> $skill/gemini-command.toml"
