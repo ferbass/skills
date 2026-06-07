@@ -1,0 +1,17 @@
+# Gemini CLI custom command -> /write-post
+# Thin wrapper that injects the shared SKILL.md so Claude and Gemini use the
+# same source of truth. Symlinked to ~/.gemini/commands/write-post.toml by
+# install.sh.
+description = "Write a blog post for ferbass.xyz (Fernando's Jekyll blog)"
+
+prompt = """
+You are helping Fernando write a post for his personal blog. Follow these
+instructions exactly:
+
+@{/Users/ferbass/Workspace/personal/skills/write-post/SKILL.md}
+
+---
+The topic / request for this post: {{args}}
+
+If that is empty or missing key context, ask the clarifying questions first.
+"""
