@@ -57,11 +57,24 @@ config, not in the shared repo.
 
 ## Install / update
 
+Run with no arguments for an interactive menu that lists each skill (with its
+install status) and lets you install or remove them:
+
 ```sh
 ./install.sh
 ```
 
-This links each skill into:
+Or non-interactively:
+
+```sh
+./install.sh --list              # show skills and whether each is installed
+./install.sh --all               # install every skill
+./install.sh <name> [<name>...]  # install specific skill(s)
+./install.sh --remove <name>...  # remove specific skill(s)
+```
+
+(With no TTY — e.g. piped — it falls back to installing everything.) Installing
+links each skill into:
 
 | Agent | Location | How |
 |-------|----------|-----|
