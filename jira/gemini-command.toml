@@ -1,6 +1,7 @@
 # Gemini CLI custom command -> /jira
 # Thin wrapper that injects the shared SKILL.md so Claude and Gemini use the
-# same source of truth. Symlinked to ~/.gemini/commands/jira.toml by install.sh.
+# same source of truth. Generated into ~/.gemini/commands/jira.toml by install.sh
+# (which substitutes __SKILL_MD__ with this machine's absolute SKILL.md path).
 description = "Work with Jira: describe, create, update, comment, or transition issues"
 
 prompt = """
@@ -11,7 +12,7 @@ with configured credentials (JIRA_URL / JIRA_USERNAME / JIRA_API_TOKEN). Only
 write a markdown file if the user explicitly asks for one. Follow these
 instructions exactly:
 
-@{/Users/ferbass/Workspace/personal/skills/jira/SKILL.md}
+@{__SKILL_MD__}
 
 ---
 Request / issue key / context (may be empty — derive from conversation if so): {{args}}

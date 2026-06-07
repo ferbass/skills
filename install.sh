@@ -9,6 +9,10 @@
 #                                    (only for skills that ship a gemini-command.toml)
 #
 # A "skill" is any subfolder here that contains a SKILL.md.
+#
+# Personal config: your `skills.config` (gitignored; copy from
+# skills.config.example) is linked to ~/.config/skills/config so the skills can
+# find your paths regardless of where this repo lives.
 
 set -euo pipefail
 
@@ -18,6 +22,25 @@ SKILLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ ! -d "$SKILLS_DIR" ]; then
   echo "error: skills dir not found: $SKILLS_DIR" >&2
   exit 1
+fi
+
+# Personal config: ensure skills.config exists, then link it to a fixed location
+# (~/.config/skills/config) that the skills read at runtime.
+CONFIG_SRC="$SKILLS_DIR/skills.config"
+CONFIG_EXAMPLE="$SKILLS_DIR/skills.config.example"
+CONFIG_LINK="$HOME/.config/skills/config"
+if [ ! -f "$CONFIG_SRC" ]; then
+  if [ -f "$CONFIG_EXAMPLE" ]; then
+    cp "$CONFIG_EXAMPLE" "$CONFIG_SRC"
+    echo "created $CONFIG_SRC from example — edit it to fill in your paths."
+  else
+    echo "warning: no skills.config or skills.config.example found." >&2
+  fi
+fi
+if [ -f "$CONFIG_SRC" ]; then
+  mkdir -p "$(dirname "$CONFIG_LINK")"
+  ln -sfn "$CONFIG_SRC" "$CONFIG_LINK"
+  echo "config  $CONFIG_LINK -> $CONFIG_SRC"
 fi
 
 # Claude config homes (each gets a skills/<name> symlink to the skill folder).
@@ -61,11 +84,17 @@ for skill in "$SKILLS_DIR"/*/; do
     done
   fi
 
-  # Gemini CLI: symlink the TOML command wrapper, if present.
+  # Gemini CLI: generate the TOML command wrapper, if present. We generate (not
+  # symlink) so the __SKILL_MD__ placeholder resolves to this machine's absolute
+  # path — that keeps the committed toml portable across clones. Write via a temp
+  # file + mv so we never redirect through a stale symlink into the source file.
   if [ "$HAVE_GEMINI" -eq 1 ] && [ -f "$skill/gemini-command.toml" ]; then
     mkdir -p "$HOME/.gemini/commands"
-    ln -sfn "$skill/gemini-command.toml" "$HOME/.gemini/commands/$name.toml"
-    echo "gemini  $HOME/.gemini/commands/$name.toml -> $skill/gemini-command.toml"
+    dest="$HOME/.gemini/commands/$name.toml"
+    tmp="$(mktemp "${dest}.XXXXXX")"
+    sed "s#__SKILL_MD__#$skill/SKILL.md#g" "$skill/gemini-command.toml" > "$tmp"
+    mv -f "$tmp" "$dest"
+    echo "gemini  $dest (from $skill/gemini-command.toml)"
     linked=$((linked + 1))
   fi
 done

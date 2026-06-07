@@ -1,14 +1,14 @@
 # Gemini CLI custom command -> /write-log
 # Thin wrapper that injects the shared SKILL.md so Claude and Gemini use the
-# same source of truth. Symlinked to ~/.gemini/commands/write-log.toml by
-# install.sh.
-description = "Create a Jekyll engineering log post for Fernando's work log"
+# same source of truth. Generated into ~/.gemini/commands/write-log.toml by
+# install.sh (which substitutes __SKILL_MD__ with the absolute SKILL.md path).
+description = "Create a Jekyll engineering log post for the user's work log"
 
 prompt = """
-You are helping Fernando document engineering work as a Jekyll post for his private log.
-Follow these instructions exactly:
+You are helping the user document engineering work as a Jekyll post for their
+private log. Follow these instructions exactly:
 
-@{/Users/ferbass/Workspace/personal/skills/write-log/SKILL.md}
+@{__SKILL_MD__}
 
 ---
 Additional context or topic hint (may be empty — derive from conversation if so): {{args}}

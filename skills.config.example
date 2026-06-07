@@ -1,0 +1,23 @@
+# Personal configuration for the skills in this repo.
+#
+# Copy this file to `skills.config` (gitignored) and fill in your values:
+#
+#   cp skills.config.example skills.config
+#
+# `install.sh` links your `skills.config` to ~/.config/skills/config so the
+# skills can find it at a fixed location regardless of where you cloned this
+# repo. Skills read the values below; if one is empty or missing they ask you.
+#
+# Format: shell-style KEY="value". Use absolute paths (you may use $HOME).
+
+# Your name — used to attribute and shape the voice of posts/logs.
+AUTHOR_NAME=""
+
+# write-log: absolute path to your engineering log Jekyll `_posts` directory.
+ENG_LOG_DIR=""
+
+# write-post: absolute path to your personal Jekyll blog repo root.
+BLOG_DIR=""
+
+# write-post: your blog's public name/URL (e.g. "example.com"), used in copy.
+BLOG_NAME=""

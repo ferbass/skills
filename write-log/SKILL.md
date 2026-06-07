@@ -1,19 +1,23 @@
 ---
 name: write-log
-description: Create a Jekyll engineering log post for Fernando's work log at /Users/ferbass/Workspace/Drivemode/local-log/_posts. Use when he says things like "write a log about X", "log what we did", "create a post for this work", "document this migration", "write up what happened", or "summarize this for the log". Derives content from the current conversation — no topic needed upfront.
+description: Create a Jekyll engineering log post for the user's work log (directory from config: ENG_LOG_DIR). Use when they say things like "write a log about X", "log what we did", "create a post for this work", "document this migration", "write up what happened", or "summarize this for the log". Derives content from the current conversation — no topic needed upfront.
 ---
 
 # Write an engineering log post
 
-Fernando keeps a private Jekyll engineering log at `/Users/ferbass/Workspace/Drivemode/local-log/_posts/`. These posts serve two purposes at once: **documentation** (what happened, why, what we found) and **runbook** (how to do it again or avoid the same pitfalls). They are thorough and technical — not a journal, not a blog post, not a PR description.
+This skill maintains a private Jekyll engineering log. These posts serve two purposes at once: **documentation** (what happened, why, what we found) and **runbook** (how to do it again or avoid the same pitfalls). They are thorough and technical — not a journal, not a blog post, not a PR description.
+
+## Configuration
+
+The log's `_posts` directory comes from your config. Read `~/.config/skills/config` and use **`ENG_LOG_DIR`**. If that file is missing or `ENG_LOG_DIR` is empty, ask the user for the path (and suggest they add it to `skills.config`). Use `$ENG_LOG_DIR` wherever a log path is referenced below.
 
 ## Step 1 — Read the existing posts for tone calibration
 
-Before writing, read 1–2 recent posts from `/Users/ferbass/Workspace/Drivemode/local-log/_posts/` to calibrate structure and tone. The posts are technical, dense, and command-heavy. They explain root causes, not just symptoms.
+Before writing, read 1–2 recent posts from `$ENG_LOG_DIR` to calibrate structure and tone. The posts are technical, dense, and command-heavy. They explain root causes, not just symptoms.
 
 ## Step 2 — Derive content from the conversation
 
-Do **not** ask Fernando to re-explain what was done — extract it from the current conversation context. Look for:
+Do **not** ask the user to re-explain what was done — extract it from the current conversation context. Look for:
 
 - **What was the goal?** The task or ticket being worked on.
 - **Working context:** git branch, Terraform roots, config files, AWS accounts/profiles, regions, relevant file paths.
@@ -23,13 +27,13 @@ Do **not** ask Fernando to re-explain what was done — extract it from the curr
 - **Observations:** anything non-obvious that would help someone doing this again — timing notes, AWS service quirks, Terraform behavior, dependency traps.
 - **Pending cleanup:** anything deliberately left undone, with why.
 
-If critical context is genuinely missing (e.g., the conversation only shows the end of a session), ask one concise question rather than guessing.
+If critical context is genuinely missing (e.g., the conversation only shows the end of a session), ask one concise question rather than guessing — but don't make the user re-explain what's already in context.
 
 ## Step 3 — Write the post
 
 **File path:**
 ```
-/Users/ferbass/Workspace/Drivemode/local-log/_posts/YYYY-MM-DD-slug.md
+$ENG_LOG_DIR/YYYY-MM-DD-slug.md
 ```
 
 Use today's date. `slug` is kebab-case from the title. Check that a file with that name doesn't already exist before writing.
@@ -98,4 +102,4 @@ Omit lines that aren't relevant to the work.
 
 ## Step 5 — After writing
 
-Tell Fernando the file path and a one-line summary of what sections were included. Do **not** `git add`/commit/push unless he explicitly asks. If he asks, follow the repo's commit conventions.
+Tell the user the file path and a one-line summary of what sections were included. Do **not** `git add`/commit/push unless they explicitly ask. If they ask, follow the repo's commit conventions.

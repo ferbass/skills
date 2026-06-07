@@ -1,0 +1,14 @@
+# Gemini CLI custom command -> /terraform
+# Thin wrapper that injects the shared SKILL.md so Claude and Gemini use the
+# same source of truth. Generated into ~/.gemini/commands/terraform.toml by
+# install.sh (which substitutes __SKILL_MD__ with the absolute SKILL.md path).
+description = "Activate the gated Terraform workflow — plan first, explain changes, flag destructive actions, confirm before apply"
+
+prompt = """
+Activate the Terraform workflow for this session. Follow these rules exactly:
+
+@{__SKILL_MD__}
+
+---
+Session context hint (may be empty — ask if missing): {{args}}
+"""
