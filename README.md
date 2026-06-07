@@ -40,10 +40,20 @@ cp skills.config.example skills.config   # then edit in your paths
 location every skill reads at runtime (it falls back to asking you if a value is
 missing). `skills.config` is gitignored; only the `.example` is committed.
 
-Keys: `AUTHOR_NAME`, `ENG_LOG_DIR` (write-log), `BLOG_DIR` / `BLOG_NAME`
+Keys: `CLAUDE_HOMES` (install.sh — which Claude home(s) to link into; defaults to
+`~/.claude`), `AUTHOR_NAME`, `ENG_LOG_DIR` (write-log), `BLOG_DIR` / `BLOG_NAME`
 (write-post). The `jira` skill reads Jira credentials from environment variables
 (`JIRA_URL`, `JIRA_USERNAME`, `JIRA_API_TOKEN`) — keep secrets in your shell, not
 in the config file.
+
+Out of the box the installer targets just `~/.claude`. To mirror skills into more
+than one home (e.g. a separate `~/.claude-personal`), set `CLAUDE_HOMES` (a bash
+array) in your `skills.config` — that personal layout stays in your gitignored
+config, not in the shared repo.
+
+> `skills.config` is bash syntax. `install.sh` (a bash script) sources it, and
+> the skills *read* it as text — nothing sources it from your interactive shell,
+> so it works regardless of whether you use bash, zsh, or fish.
 
 ## Install / update
 
@@ -55,8 +65,7 @@ This links each skill into:
 
 | Agent | Location | How |
 |-------|----------|-----|
-| `claude` | `~/.claude/skills/<name>` | symlink |
-| `claude-personal` | `~/.claude-personal/skills/<name>` | symlink |
+| Claude | `<home>/skills/<name>` for each `CLAUDE_HOMES` entry (default `~/.claude`) | symlink |
 | Gemini CLI | `~/.gemini/commands/<name>.toml` | generated (if the skill has `gemini-command.toml`) |
 
 The Gemini wrapper is **generated**, not symlinked: `install.sh` substitutes the

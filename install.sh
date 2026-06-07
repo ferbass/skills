@@ -3,10 +3,10 @@
 # Symlink every skill in this folder into all the coding agents on this machine,
 # so they share one source of truth. Re-run any time you add a skill.
 #
-#   - Claude (`claude`)           -> ~/.claude/skills/<name>
-#   - Claude (`claude-personal`)  -> ~/.claude-personal/skills/<name>
-#   - Gemini CLI                  -> ~/.gemini/commands/<name>.toml
-#                                    (only for skills that ship a gemini-command.toml)
+#   - Claude        -> <home>/skills/<name>   for each configured Claude home
+#                      (defaults to ~/.claude; override via CLAUDE_HOMES in config)
+#   - Gemini CLI    -> ~/.gemini/commands/<name>.toml
+#                      (only for skills that ship a gemini-command.toml)
 #
 # A "skill" is any subfolder here that contains a SKILL.md.
 #
@@ -41,12 +41,21 @@ if [ -f "$CONFIG_SRC" ]; then
   mkdir -p "$(dirname "$CONFIG_LINK")"
   ln -sfn "$CONFIG_SRC" "$CONFIG_LINK"
   echo "config  $CONFIG_LINK -> $CONFIG_SRC"
+  # Pull in config values we use here (e.g. CLAUDE_HOMES). It's your own file of
+  # KEY="value" lines; sourcing keeps a single source of truth.
+  # shellcheck disable=SC1090
+  . "$CONFIG_SRC"
 fi
 
 # Claude config homes (each gets a skills/<name> symlink to the skill folder).
+# Default to the standard ~/.claude; set CLAUDE_HOMES in skills.config to use a
+# different or additional home (e.g. a second ~/.claude-personal). It's a bash
+# array, so paths with spaces are handled correctly.
+_wanted_homes=("${CLAUDE_HOMES[@]:-$HOME/.claude}")
+
 # Keep only the homes that actually exist on this machine; note the ones skipped.
 CLAUDE_HOMES=()
-for home in "$HOME/.claude" "$HOME/.claude-personal"; do
+for home in "${_wanted_homes[@]}"; do
   if [ -d "$home" ]; then
     CLAUDE_HOMES+=("$home")
   else

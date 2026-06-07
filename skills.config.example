@@ -10,6 +10,11 @@
 #
 # Format: shell-style KEY="value". Use absolute paths (you may use $HOME).
 
+# install.sh: which Claude config home(s) to link skills into. Bash array.
+# Defaults to ("$HOME/.claude") when unset. Uncomment to add more — e.g. a second
+# personal home: CLAUDE_HOMES=("$HOME/.claude" "$HOME/.claude-personal")
+# CLAUDE_HOMES=("$HOME/.claude")
+
 # Your name — used to attribute and shape the voice of posts/logs.
 AUTHOR_NAME=""
 
