@@ -87,6 +87,11 @@ The Gemini wrapper is **generated**, not symlinked: `install.sh` substitutes the
 why the committed `gemini-command.toml` stays portable across clones — re-run
 `./install.sh` after editing one.
 
+**Codex CLI** is *detected* (`HAS_CODEX`: `codex` on `PATH` or a `~/.codex`
+directory), so a Codex-only machine is a valid install target. Generating the
+Codex prompt files (`~/.codex/prompts/<name>.md`) is not wired up yet — detection
+is the first step.
+
 Restart each agent afterward so it discovers new skills.
 
 ## Adding a skill
