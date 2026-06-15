@@ -9,6 +9,7 @@ agents see the change.
 
 | Skill | What it does |
 |-------|--------------|
+| [`handoff`](handoff/SKILL.md) | Capture in-flight work into a project-local handoff doc (`.claude/handoffs/`) so another agent or a later session can pick it up — or resume from an existing handoff and continue. Derives state from the current conversation. |
 | [`jira`](jira/SKILL.md) | Work with Jira issues from the conversation — describe, create, update, comment, and transition (e.g. move to In Progress / Done). Uses a local Jira MCP, falling back to the REST API with configured credentials. |
 | [`terraform`](terraform/SKILL.md) | Gated Terraform workflow — plan first, explain changes, flag destructive actions, and confirm before every apply. |
 | [`write-log`](write-log/SKILL.md) | Draft a Jekyll engineering-log post from the current conversation (documentation + runbook). Writes to `ENG_LOG_DIR`. |
