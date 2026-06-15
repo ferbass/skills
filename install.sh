@@ -58,11 +58,13 @@ for home in "${_wanted_homes[@]}"; do
   fi
 done
 
-# ---- gemini availability --------------------------------------------------
+# ---- gemini / codex availability ------------------------------------------
 if command -v gemini >/dev/null 2>&1; then HAVE_GEMINI=1; else HAVE_GEMINI=0; fi
+# Codex CLI: present if the binary is on PATH or its home dir exists.
+if command -v codex >/dev/null 2>&1 || [ -d "$HOME/.codex" ]; then HAS_CODEX=1; else HAS_CODEX=0; fi
 
-if [ "${#CLAUDE_HOMES[@]}" -eq 0 ] && [ "$HAVE_GEMINI" -eq 0 ]; then
-  echo "error: no Claude homes and no Gemini CLI found; nothing to do." >&2
+if [ "${#CLAUDE_HOMES[@]}" -eq 0 ] && [ "$HAVE_GEMINI" -eq 0 ] && [ "$HAS_CODEX" -eq 0 ]; then
+  echo "error: no Claude homes and no Gemini/Codex CLI found; nothing to do." >&2
   exit 1
 fi
 
