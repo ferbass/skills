@@ -6,10 +6,11 @@ description: Work with Jira issues from the conversation — describe (read), cr
 # Work with Jira
 
 This skill handles the common Jira operations driven from the current
-conversation. Every operation runs through one of two **backends** (see
-"Backend selection" below): the **Jira MCP** if connected, otherwise the **Jira
-REST API** using configured credentials. The per-operation steps (D/C/U/M/T)
-describe *what* to do; the backend section describes *how* to execute it.
+conversation. Every operation runs through one of the **backends** listed in
+"Backend selection" below: the bundled **`bin/jira.sh`** CLI (works in any
+harness), a connected **Jira MCP**, or the raw **Jira REST API**. The
+per-operation steps (D/C/U/M/T) describe *what* to do; the backend section
+describes *how* to execute it.
 
 ## Step 0 — Figure out the operation
 
@@ -38,13 +39,42 @@ Reading (describe) needs no confirmation.
 
 Pick the backend in this order:
 
-1. **Jira MCP (preferred).** Check your tools for a Jira MCP — `mcp-atlassian`,
+0. **`bin/jira.sh` (preferred — works in every harness).** This skill ships a
+   self-contained CLI at `bin/jira.sh`, next to this file. It resolves
+   credentials itself (env vars, else a Jira `env`/`environment` block in your
+   agent's MCP config) and never prints the token, so **you never handle the
+   credential**. Prefer it over both options below — it is the only backend that
+   works in a harness with no Jira MCP connected (opencode, pi, Gemini CLI).
+
+   Resolve the path against **this skill's own directory** — your harness tells
+   you where the skill was loaded from. If you don't have it, locate the script:
+
+   ```bash
+   J="$(ls -d ~/.claude/skills/jira/bin/jira.sh ~/.agents/skills/jira/bin/jira.sh \
+        ~/.pi/agent/skills/jira/bin/jira.sh ~/.config/opencode/skill*/jira/bin/jira.sh \
+        2>/dev/null | head -1)"
+   $J whoami                       # verify credentials
+   $J get PROJ-123                 # summary, status, type, assignee, description
+   $J search 'project = PROJ AND status = "In Progress"' 20
+   $J comments PROJ-123
+   $J comment PROJ-123 "text"
+   $J create PROJ Task "summary" "description"
+   $J update PROJ-123 '{"summary":"new"}'
+   $J transitions PROJ-123         # list valid transitions first
+   $J transition PROJ-123 "In Progress"
+   ```
+
+   Run `$J --help` for the full list. If it exits non-zero, read the message —
+   it distinguishes missing credentials from API errors. Do not fall back to
+   raw `curl` just because a call failed; fix the call.
+
+1. **Jira MCP.** Check your tools for a Jira MCP — `mcp-atlassian`,
    typically registered as `jira`, exposing tools like `jira_get_issue`,
    `jira_create_issue`, `jira_update_issue`, `jira_add_comment`,
    `jira_get_transitions`, `jira_transition_issue` (often namespaced as
-   `mcp__jira__jira_create_issue`). If present, use it.
-2. **Jira REST API (fallback).** If no MCP, use the REST API with configured
-   credentials from the environment:
+   `mcp__jira__jira_create_issue`). Use it only if `bin/jira.sh` is unavailable.
+2. **Raw Jira REST API (last resort).** If the script is missing, use the REST
+   API with configured credentials from the environment:
    - `JIRA_URL` — site base, e.g. `https://your-site.atlassian.net`
    - `JIRA_USERNAME` — account email (Jira Cloud)
    - `JIRA_API_TOKEN` — API token
@@ -55,7 +85,8 @@ Pick the backend in this order:
    fallback; only when the user says so (e.g. "just make a markdown file"). See the
    markdown note in Step C.
 
-If neither MCP nor REST credentials are available, say so plainly and stop.
+If the script is missing and neither an MCP nor REST credentials are available,
+say so plainly and stop.
 
 ### REST API recipes (Cloud)
 
