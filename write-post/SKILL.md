@@ -1,6 +1,6 @@
 ---
 name: write-post
-description: Help the user write a post for their personal Jekyll blog (repo from config: BLOG_DIR). Use when they say things like "start a post about X", "write a post on Y", "draft a blog post", or "let's blog about Z". Gathers any missing context first, then drafts in their voice following the blog's conventions.
+description: Help the user write a post for their personal Jekyll blog (repo from the BLOG_DIR config key). Use when they say things like "start a post about X", "write a post on Y", "draft a blog post", or "let's blog about Z". Gathers any missing context first, then drafts in their voice following the blog's conventions.
 ---
 
 # Write a blog post

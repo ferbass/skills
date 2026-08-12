@@ -19,10 +19,12 @@ A handoff is a **runbook for the next agent**, not a status report for a human. 
 Project-local, in the current repo:
 
 ```
-.claude/handoffs/YYYY-MM-DD-slug.md
+.agents/handoffs/YYYY-MM-DD-slug.md
 ```
 
-`slug` is kebab-case from the task. Using `.claude/handoffs/` keeps the handoff next to the code it describes, so another agent working in the same repo discovers it naturally. Create the directory if it doesn't exist.
+`slug` is kebab-case from the task. Keeping handoffs in the repo puts them next to the code they describe, so another agent working there discovers them naturally — and `.agents/` is harness-neutral, so a handoff written from Claude Code is picked up by opencode, pi, or Gemini CLI just the same.
+
+**Existing convention wins:** if the repo already has a `.claude/handoffs/` directory (or any other handoffs directory in use), keep writing there instead of starting a second one. Otherwise use `.agents/handoffs/` and create it if missing.
 
 ---
 
@@ -49,7 +51,7 @@ Run `git status --short` and `git branch --show-current` so the handoff records 
 
 ### Step 3 — Write the handoff
 
-Path: `.claude/handoffs/YYYY-MM-DD-slug.md` (today's date; check the name is free first).
+Path: `<handoffs-dir>/YYYY-MM-DD-slug.md` (see "Where handoffs live"; today's date; check the name is free first).
 
 Front matter:
 ```yaml
@@ -106,7 +108,7 @@ Tell the user the file path and a one-line summary of what's captured. Mention t
 
 ### Step 1 — Locate the handoff
 
-If the user named one, use it. Otherwise list `.claude/handoffs/` and pick the most recent (by date in filename / mtime). If several look plausible, show the candidates and ask. If the directory is empty or missing, say so — there's nothing to resume.
+If the user named one, use it. Otherwise list **both** `.agents/handoffs/` and `.claude/handoffs/` (a repo may have started on either) and pick the most recent (by date in filename / mtime). If several look plausible, show the candidates and ask. If both are empty or missing, say so — there's nothing to resume.
 
 ### Step 2 — Load and re-establish context
 

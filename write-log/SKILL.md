@@ -1,6 +1,6 @@
 ---
 name: write-log
-description: Create a Jekyll engineering log post for the user's work log (directory from config: ENG_LOG_DIR). Use when they say things like "write a log about X", "log what we did", "create a post for this work", "document this migration", "write up what happened", or "summarize this for the log". Derives content from the current conversation — no topic needed upfront.
+description: Create a Jekyll engineering log post for the user's work log (directory from the ENG_LOG_DIR config key). Use when they say things like "write a log about X", "log what we did", "create a post for this work", "document this migration", "write up what happened", or "summarize this for the log". Derives content from the current conversation — no topic needed upfront.
 ---
 
 # Write an engineering log post
