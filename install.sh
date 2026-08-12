@@ -2,10 +2,13 @@
 #
 # Manage this repo's skills across the coding agents on this machine.
 #
-#   - Claude     -> <home>/skills/<name>   for each configured Claude home
-#                   (defaults to ~/.claude; override via CLAUDE_HOMES in config)
-#   - Gemini CLI -> ~/.gemini/commands/<name>.toml
-#                   (only for skills that ship a gemini-command.toml)
+#   - Claude       -> <home>/skills/<name>   for each configured Claude home
+#                     (defaults to ~/.claude; override via CLAUDE_HOMES in config)
+#   - Gemini CLI   -> ~/.gemini/commands/<name>.toml
+#                     (only for skills that ship a gemini-command.toml)
+#   - opencode/pi  -> ~/.agents/skills/<name>
+#                     both harnesses auto-discover this shared directory
+#   - opencode     -> ~/.config/opencode/command/<name>.md  (generated /<name>)
 #
 # A "skill" is any subfolder here that contains a SKILL.md.
 #
@@ -58,13 +61,30 @@ for home in "${_wanted_homes[@]}"; do
   fi
 done
 
-# ---- gemini / codex availability ------------------------------------------
+# ---- other agent availability ---------------------------------------------
 if command -v gemini >/dev/null 2>&1; then HAVE_GEMINI=1; else HAVE_GEMINI=0; fi
 # Codex CLI: present if the binary is on PATH or its home dir exists.
 if command -v codex >/dev/null 2>&1 || [ -d "$HOME/.codex" ]; then HAS_CODEX=1; else HAS_CODEX=0; fi
+if command -v opencode >/dev/null 2>&1 || [ -d "$HOME/.config/opencode" ]; then
+  HAVE_OPENCODE=1
+else
+  HAVE_OPENCODE=0
+fi
+if command -v pi >/dev/null 2>&1 || [ -d "$HOME/.pi" ]; then HAVE_PI=1; else HAVE_PI=0; fi
 
-if [ "${#CLAUDE_HOMES[@]}" -eq 0 ] && [ "$HAVE_GEMINI" -eq 0 ] && [ "$HAS_CODEX" -eq 0 ]; then
-  echo "error: no Claude homes and no Gemini/Codex CLI found; nothing to do." >&2
+# opencode and pi both auto-discover ~/.agents/skills/<name>/SKILL.md, so one
+# symlink there serves both. Override with AGENTS_SKILLS_DIR in skills.config.
+AGENTS_SKILLS_DIR="${AGENTS_SKILLS_DIR:-$HOME/.agents/skills}"
+OPENCODE_COMMANDS_DIR="${OPENCODE_COMMANDS_DIR:-$HOME/.config/opencode/command}"
+if [ "$HAVE_OPENCODE" -eq 1 ] || [ "$HAVE_PI" -eq 1 ]; then
+  HAVE_AGENTS_DIR=1
+else
+  HAVE_AGENTS_DIR=0
+fi
+
+if [ "${#CLAUDE_HOMES[@]}" -eq 0 ] && [ "$HAVE_GEMINI" -eq 0 ] && [ "$HAS_CODEX" -eq 0 ] \
+   && [ "$HAVE_AGENTS_DIR" -eq 0 ]; then
+  echo "error: no Claude homes and no Gemini/Codex/opencode/pi install found; nothing to do." >&2
   exit 1
 fi
 
@@ -80,15 +100,47 @@ if [ "${#ALL_SKILLS[@]}" -eq 0 ]; then
 fi
 
 # ---- helpers --------------------------------------------------------------
-# A skill counts as installed if it's linked in any Claude home or has a
-# generated Gemini command. The ${arr[@]+...} idiom is empty-array safe.
+# A skill counts as installed if it's linked in any Claude home, shared with
+# opencode/pi, or has a generated Gemini command. The ${arr[@]+...} idiom is
+# empty-array safe.
 is_installed() {
   local name="$1" home
   for home in ${CLAUDE_HOMES[@]+"${CLAUDE_HOMES[@]}"}; do
     [ -e "$home/skills/$name" ] && return 0
   done
+  [ -e "$AGENTS_SKILLS_DIR/$name" ] && return 0
   [ -f "$HOME/.gemini/commands/$name.toml" ] && return 0
   return 1
+}
+
+# The `description:` value from a SKILL.md front matter, escaped for use as a
+# YAML single-quoted scalar.
+skill_description() {
+  local desc q="'"
+  desc="$(sed -n '2,20s/^description:[[:space:]]*//p' "$1" | head -1)"
+  desc="${desc%\"}"; desc="${desc#\"}"
+  # A single quote inside a YAML single-quoted scalar is written as two.
+  printf '%s' "${desc//$q/$q$q}"
+}
+
+# opencode custom command: a thin /<name> wrapper that points the agent at the
+# shared SKILL.md, so opencode and Claude read the same source of truth.
+opencode_command() {
+  local skill="$1"
+  cat <<EOF
+---
+description: '$(skill_description "$skill/SKILL.md")'
+---
+
+Follow the skill instructions in \`$skill/SKILL.md\` exactly — read that file
+first, then do what it says.
+
+Its base directory is \`$skill\`; resolve any relative path it mentions (e.g.
+\`bin/…\`, \`references/…\`) against that directory.
+
+Request / context (may be empty — derive it from the conversation if so):
+\$ARGUMENTS
+EOF
 }
 
 install_one() {
@@ -102,6 +154,19 @@ install_one() {
     ln -sfn "$skill" "$home/skills/$name"
     echo "  claude  $home/skills/$name"
   done
+  if [ "$HAVE_AGENTS_DIR" -eq 1 ]; then
+    mkdir -p "$AGENTS_SKILLS_DIR"
+    ln -sfn "$skill" "$AGENTS_SKILLS_DIR/$name"
+    echo "  agents  $AGENTS_SKILLS_DIR/$name (opencode + pi)"
+  fi
+  if [ "$HAVE_OPENCODE" -eq 1 ]; then
+    mkdir -p "$OPENCODE_COMMANDS_DIR"
+    dest="$OPENCODE_COMMANDS_DIR/$name.md"
+    tmp="$(mktemp "${dest}.XXXXXX")"
+    opencode_command "$skill" > "$tmp"
+    mv -f "$tmp" "$dest"
+    echo "  opencode $dest"
+  fi
   if [ "$HAVE_GEMINI" -eq 1 ] && [ -f "$skill/gemini-command.toml" ]; then
     mkdir -p "$HOME/.gemini/commands"
     dest="$HOME/.gemini/commands/$name.toml"
@@ -121,12 +186,18 @@ remove_one() {
       removed=1
     fi
   done
-  dest="$HOME/.gemini/commands/$name.toml"
-  if [ -f "$dest" ]; then
-    rm -f "$dest"
-    echo "  removed $dest"
+  if [ -e "$AGENTS_SKILLS_DIR/$name" ] || [ -L "$AGENTS_SKILLS_DIR/$name" ]; then
+    rm -rf "$AGENTS_SKILLS_DIR/$name"
+    echo "  removed $AGENTS_SKILLS_DIR/$name"
     removed=1
   fi
+  for dest in "$OPENCODE_COMMANDS_DIR/$name.md" "$HOME/.gemini/commands/$name.toml"; do
+    if [ -f "$dest" ]; then
+      rm -f "$dest"
+      echo "  removed $dest"
+      removed=1
+    fi
+  done
   [ "$removed" -eq 1 ] || echo "  $name was not installed"
 }
 
@@ -189,6 +260,9 @@ apply_to_selection() {
 
 interactive() {
   local targets="${CLAUDE_HOMES[*]:-(no claude homes)}"
+  [ "$HAVE_AGENTS_DIR" -eq 1 ] && targets="$targets + $AGENTS_SKILLS_DIR"
+  [ "$HAVE_OPENCODE" -eq 1 ] && targets="$targets + opencode"
+  [ "$HAVE_PI" -eq 1 ] && targets="$targets + pi"
   [ "$HAVE_GEMINI" -eq 1 ] && targets="$targets + gemini"
   echo "Targets: $targets"
   local action sel
@@ -237,7 +311,7 @@ case "${1:-}" in
     echo "Done."
     ;;
   --help|-h)
-    sed -n '3,18p' "$0"
+    sed -n '3,21p' "$0"
     ;;
   "")
     # Interactive when attached to a terminal; otherwise behave like --all so

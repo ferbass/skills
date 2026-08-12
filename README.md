@@ -9,7 +9,7 @@ agents see the change.
 
 | Skill | What it does |
 |-------|--------------|
-| [`handoff`](handoff/SKILL.md) | Capture in-flight work into a project-local handoff doc (`.claude/handoffs/`) so another agent or a later session can pick it up — or resume from an existing handoff and continue. Derives state from the current conversation. |
+| [`handoff`](handoff/SKILL.md) | Capture in-flight work into a project-local handoff doc (`.agents/handoffs/`) so another agent or a later session can pick it up — or resume from an existing handoff and continue. Derives state from the current conversation. |
 | [`jira`](jira/SKILL.md) | Work with Jira issues from the conversation — describe, create, update, comment, and transition (e.g. move to In Progress / Done). Uses a local Jira MCP, falling back to the REST API with configured credentials. |
 | [`terraform`](terraform/SKILL.md) | Gated Terraform workflow — plan first, explain changes, flag destructive actions, and confirm before every apply. |
 | [`write-log`](write-log/SKILL.md) | Draft a Jekyll engineering-log post from the current conversation (documentation + runbook). Writes to `ENG_LOG_DIR`. |
@@ -23,7 +23,8 @@ skills/
 ├── skills.config.example   # template for your personal paths (committed)
 ├── skills.config           # your filled-in copy (gitignored)
 ├── <skill-name>/
-│   ├── SKILL.md            # the skill (Claude reads this)
+│   ├── SKILL.md            # the skill (Claude, opencode and pi read this)
+│   ├── bin/                # optional: helper scripts the skill calls
 │   └── gemini-command.toml # optional: Gemini CLI /command wrapper
 ```
 
@@ -42,10 +43,13 @@ location every skill reads at runtime (it falls back to asking you if a value is
 missing). `skills.config` is gitignored; only the `.example` is committed.
 
 Keys: `CLAUDE_HOMES` (install.sh — which Claude home(s) to link into; defaults to
-`~/.claude`), `AUTHOR_NAME`, `ENG_LOG_DIR` (write-log), `BLOG_DIR` / `BLOG_NAME`
-(write-post). The `jira` skill reads Jira credentials from environment variables
-(`JIRA_URL`, `JIRA_USERNAME`, `JIRA_API_TOKEN`) — keep secrets in your shell, not
-in the config file.
+`~/.claude`), `AGENTS_SKILLS_DIR` / `OPENCODE_COMMANDS_DIR` (install.sh — the
+opencode+pi targets; sensible defaults, rarely set), `AUTHOR_NAME`, `ENG_LOG_DIR`
+(write-log), `BLOG_DIR` / `BLOG_NAME` (write-post). The `jira` skill reads Jira
+credentials from environment variables (`JIRA_URL`, `JIRA_USERNAME`,
+`JIRA_API_TOKEN`), or from an MCP `env`/`environment` block in your agent's own
+config (Claude, opencode, Gemini, pi) — keep secrets in your shell or those
+configs, not in `skills.config`.
 
 Out of the box the installer targets just `~/.claude`. To mirror skills into more
 than one home (e.g. a separate `~/.claude-personal`), set `CLAUDE_HOMES` (a bash
@@ -80,12 +84,29 @@ links each skill into:
 | Agent | Location | How |
 |-------|----------|-----|
 | Claude | `<home>/skills/<name>` for each `CLAUDE_HOMES` entry (default `~/.claude`) | symlink |
+| opencode + pi | `~/.agents/skills/<name>` | symlink |
+| opencode | `~/.config/opencode/command/<name>.md` | generated `/<name>` wrapper |
 | Gemini CLI | `~/.gemini/commands/<name>.toml` | generated (if the skill has `gemini-command.toml`) |
 
-The Gemini wrapper is **generated**, not symlinked: `install.sh` substitutes the
-`__SKILL_MD__` placeholder with this machine's absolute `SKILL.md` path. That's
-why the committed `gemini-command.toml` stays portable across clones — re-run
-`./install.sh` after editing one.
+**opencode and pi share one directory.** Both auto-discover
+`~/.agents/skills/<name>/SKILL.md` with no config at all, so a single symlink
+covers both. In pi each skill also becomes a `/skill:<name>` command; in opencode
+the agent loads it through the `skill` tool, plus the generated `/<name>`
+command. Verify what each one sees with `opencode debug skill` and, for pi,
+`printf '{"type":"get_commands"}\n' | pi --mode rpc --no-session`.
+
+opencode *also* auto-loads `~/.claude/skills/`, so with the default
+`CLAUDE_HOMES` it finds each skill twice (both symlinks resolve to the same file,
+so it just logs a duplicate-name warning). Set
+`OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` if you'd rather it only read the shared
+directory.
+
+The Gemini and opencode wrappers are **generated**, not symlinked: `install.sh`
+substitutes this machine's absolute `SKILL.md` path (Gemini via the
+`__SKILL_MD__` placeholder in the committed `gemini-command.toml`; opencode from
+the skill's front-matter description). That's what keeps the repo portable across
+clones — re-run `./install.sh` after editing a skill's description or its
+`gemini-command.toml`.
 
 **Codex CLI** is *detected* (`HAS_CODEX`: `codex` on `PATH` or a `~/.codex`
 directory), so a Codex-only machine is a valid install target. Generating the
@@ -97,11 +118,20 @@ Restart each agent afterward so it discovers new skills.
 ## Adding a skill
 
 1. Make a folder `skills/<name>/` with a `SKILL.md` (YAML front matter: `name`,
-   `description`, then the instructions).
+   `description`, then the instructions). `name` must be lowercase
+   `a-z0-9-`, match the folder, and the front matter must be **strict YAML** —
+   opencode and pi parse it strictly and silently skip a skill they can't read.
+   In particular an unquoted `description` may not contain `": "` (quote the
+   value or reword); Claude Code is lenient about this and will hide the bug.
 2. Optional: add `gemini-command.toml` to expose it as `/<name>` in Gemini CLI.
    Use `@{__SKILL_MD__}` to inject the shared instructions (install.sh resolves
-   the absolute path) and `{{args}}` for the user's input.
-3. For any user-specific paths, add a key to `skills.config.example` and have the
+   the absolute path) and `{{args}}` for the user's input. The opencode `/<name>`
+   command is generated automatically — no per-skill file needed.
+3. Keep the instructions harness-neutral: no `~/.claude/...` paths, no
+   Claude-only tool names. Reference bundled helpers by their path *relative to
+   the skill directory* (`bin/foo.sh`) — every harness tells the agent where the
+   skill was loaded from.
+4. For any user-specific paths, add a key to `skills.config.example` and have the
    skill read it from `~/.config/skills/config` (fall back to asking). Don't
    hardcode personal paths in `SKILL.md`.
-4. Run `./install.sh`.
+5. Run `./install.sh`.
